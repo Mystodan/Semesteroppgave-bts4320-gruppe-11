@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>BIDRAG</title>
+  </head>
+  <body>
+    <form action='http://localhost:8081' method='post'>
+      <table>
+	<tr>
+	  <td> E-post </td>
+	  <td> <input name='epost' type='text' id='epost'> </td>
+	</tr>  
+	<tr>   
+	  <td> Passord </td>
+	  <td> <input name='passord' type='text' id='passord'> </td>
+	</tr>
+	<tr>   
+	  <td> Tittel </td>
+	  <td> <input name='tittel' type='text' id='tittel' > </td>
+	</tr>  
+	<tr>   
+	  <td> Kommentar </td>
+	  <td> <textarea name='kommentar' id='kommentar' > </textarea> </td>
+	</tr>
+	<tr>   
+	  <td> Tekst </td>
+	  <td> <textarea name='tekst' id='tekst' > </textarea> </td>
+	</tr>
+      <br/>
+      <input type='submit' name='handling' value='Endre' >
+      <input type='submit' name='handling' value='Slett' >
+      <input type='submit' name='handling' value='Ny'    >
+      <input type='submit' name='handling' value='Liste' >
+    </form>      
+    <br/>
+  </body>
+</html>
