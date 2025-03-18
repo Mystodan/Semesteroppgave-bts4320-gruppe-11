@@ -35,17 +35,23 @@ podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
 
 # Lager kubernetes-fil
-rm ./allpodd.yaml
-podman generate kube allpodd --service -f ./allpodd.yaml
+#rm ./allpodd.yaml
+#podman generate kube allpodd --service -f ./allpodd.yaml
 
 # Erstatt nodePort verdien etter navn: "80"
-sed -i '/- name: "80"/!b;n;s/nodePort: [0-9]\+/nodePort: 30080/' allpodd.yaml
+#sed -i '/- name: "80"/!b;n;s/nodePort: [0-9]\+/nodePort: 30080/' allpodd.yaml
 
 # Erstatt nodePort verdien etter navn: "81"
-sed -i '/- name: "81"/!b;n;s/nodePort: [0-9]\+/nodePort: 30081/' allpodd.yaml
+#sed -i '/- name: "81"/!b;n;s/nodePort: [0-9]\+/nodePort: 30081/' allpodd.yaml
 
 # imagePullPolicy: Never
-sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
+#sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
+
+# Setter inn volumes i bunnen av filen.
+#sed -i '$a\volumes:' allpodd.yaml
+
+#sed -i '/volumes:/a\\t- name "bidrag-data"' allpodd.yaml
+
 
 # Rydder opp (ved å drepe og fjerne podden)
 podman pod kill allpodd
@@ -55,6 +61,13 @@ podman pod rm   allpodd
 # Stoppper kjørende service og pod
 microk8s kubectl delete service/allpodd
 microk8s kubectl delete pod/allpodd
+
+# Sletter PersistentVolume og PersistentVolumeClaims for bidrag og pseudonym databasene.
+microk8s kubectl delete pv bidrag-pv &
+microk8s kubectl delete pvc bidrag-pvc &
+microk8s kubectl delete pv pseudonym-pv &
+microk8s kubectl delete pvc pseudonym-pvc &
+
 
 # Starte podden i en Service i K8S
 microk8s kubectl create -f allpodd.yaml

@@ -15,7 +15,7 @@ KROPP=$(head -c "$CONTENT_LENGTH")
 KROPP=$(echo $KROPP|sed "s/%40/@/")
 
 # Til loggen (kubctl logs pods/allpodd -c app -f)
-echo app fikk dette i kroppen: $KROP >&2
+echo app fikk dette i kroppen: $KROPP >&2
 
 
 # Fordeler inndataene i variabler

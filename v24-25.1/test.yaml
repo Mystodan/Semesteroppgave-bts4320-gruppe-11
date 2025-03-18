@@ -1,0 +1,65 @@
+volumes:
+  - name: "bidrag-data"
+    hostPath:
+      path: "/var/www"
+  - name: "pseudonym-data"
+    hostPath:
+      path: "/var/www"
+
+volumeMounts:
+  - mountPath: "/bidrag-db"
+    name: "bidrag-data"
+
+volumeMounts:
+  - mountPath: "/pseudonym-db"
+    name: "pseudonym-data"
+---
+
+
+apiVerison: v1
+kind: PersistentVolume
+metadata:
+  name: bidrag-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/var/www"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bidrag-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVerison: v1
+kind: PersistentVolume
+metadata:
+  name: pseudonym-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostpath:
+    path: "/var/www"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pseudonym-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi

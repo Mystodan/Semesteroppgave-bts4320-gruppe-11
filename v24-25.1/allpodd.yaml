@@ -1,0 +1,131 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-4.9.3
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2025-03-12T21:53:20Z"
+  labels:
+    app: allpodd
+  name: allpodd
+spec:
+  ports:
+  - name: "80"
+    nodePort: 30080
+    port: 80
+    targetPort: 80
+  - name: "81"
+    nodePort: 30081
+    port: 81
+    targetPort: 81
+  selector:
+    app: allpodd
+  type: NodePort
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2025-03-12T21:53:20Z"
+  labels:
+    app: allpodd
+  name: allpodd
+spec:
+  volumes:
+    - name: "bidrag-data"
+      persistentVolumeClaim:
+        claimName: bidrag-pvc
+    - name: "pseudonym-data"
+      persistentVolumeClaim:
+        claimName: pseudonym-pvc
+  containers:
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/app:latest
+    imagePullPolicy: Never
+    name: app
+    ports:
+    - containerPort: 80
+    - containerPort: 81
+    stdin: true
+    tty: true
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/bidrag-db:latest
+    imagePullPolicy: Never
+    name: bidrag-db
+    stdin: true
+    tty: true
+    volumeMounts:
+      - mountPath: "/var/www"
+        name: "bidrag-data"
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/pseudonym-db:latest
+    imagePullPolicy: Never
+    name: pseudonym-db
+    stdin: true
+    tty: true
+    volumeMounts:
+      - mountPath: "/var/www"
+        name: "pseudonym-data"
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/web:latest
+    imagePullPolicy: Never
+    name: web
+    stdin: true
+    tty: true
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bidrag-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/var/www"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bidrag-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pseudonym-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/var/www"
+    
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pseudonym-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
