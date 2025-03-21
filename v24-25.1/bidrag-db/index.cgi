@@ -14,13 +14,10 @@ EOF
 
 
 # Omgår bug i httpd
-CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
+CONTENT_LENGTH="${HTTP_CONTENT_LENGTH:-$CONTENT_LENGTH}"
 
-if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst FROM  Bidrag"
-    exit
 
-elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
     exit
 
 else
@@ -38,7 +35,20 @@ else
 
 fi
 
+if [ "$REQUEST_METHOD" = "GET" ]; then
+    # Hvis pseudonym er satt, hentes kommentaren til brukeren i tillegg til andre sine titler og tekst
+    if [ -n "$N" ]; then # pseudonyme er satt weak auth
+        sqlite3 -line $DB "SELECT tittel, tekst, kommentar FROM Bidrag WHERE pseudonym='$N'"
+        sqlite3 -line $DB "SELECT tittel, tekst FROM Bidrag WHERE NOT pseudonym='$N'"
+    else # pseudonym er ikke satt 
+        sqlite3 -line $DB "SELECT tittel, tekst FROM Bidrag"
+    fi
+    exit
+fi
+
+
 if [ "$N" = "" ]; then echo Pseudonym mangler!; exit; fi
+
 
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
@@ -79,7 +89,7 @@ elif [ "$REQUEST_METHOD" = "PUT" ]; then
        "UPDATE Bidrag SET      \
     	kommentar='$K',        \
     	offentlig_nokkel='$O', \
-	tittel='$T',           \
+	    tittel='$T',           \
         tekst='$X'             \
         WHERE pseudonym='$N'"
 fi
