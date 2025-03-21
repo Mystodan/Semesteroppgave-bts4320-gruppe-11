@@ -46,6 +46,48 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     exit
 fi
 
+if [ "$REQUEST_METHOD" = "GET" ]; then
+    if [ -n "$N" -a -n "$P" ]; then
+
+        # Henter lagret saltverdi
+        S=$( sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'" )
+        if [ "$S" = "" ]; then echo Salt mangler ; exit; fi
+
+        # Beregner hashverdi av innsendt passord
+        H1=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
+
+        # Sammenligner med lagret hashverdi
+        H2=$( sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'" )
+        if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
+
+        # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
+        QUERY="SELECT tittel, tekst, kommentar 
+        FROM Bidrag 
+        WHERE pseudonym='$N'
+        UNION
+        SELECT tittel, tekst, NULL AS kommentar 
+        FROM Bidrag 
+        WHERE pseudonym!='$N'"
+
+        # Logger bruker innlogging
+        echo -e "\nLogging: \nBruker = $N" >&2
+    else
+        # Query for alle uten kommentar
+        QUERY="SELECT tittel, tekst FROM Bidrag"
+    fi
+
+    # Kjører queryen
+    RESULT=$(sqlite3 -line $DB "$QUERY" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        echo "Feil: Mislykket å kjøre Query" >&2
+        exit 1
+    fi
+
+    # utgir resultatet
+    echo "$RESULT"
+    exit
+fi
+
 
 if [ "$N" = "" ]; then echo Pseudonym mangler!; exit; fi
 
@@ -93,3 +135,5 @@ elif [ "$REQUEST_METHOD" = "PUT" ]; then
         tekst='$X'             \
         WHERE pseudonym='$N'"
 fi
+
+
