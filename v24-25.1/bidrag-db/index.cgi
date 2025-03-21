@@ -35,42 +35,42 @@ else
 
 fi
 
-if [ "$REQUEST_METHOD" = "GET" ]; then
-    # Hvis pseudonym er satt, hentes kommentaren til brukeren i tillegg til andre sine titler og tekst
-    if [ -n "$N" ]; then # pseudonyme er satt weak auth
-        sqlite3 -line $DB "SELECT tittel, tekst, kommentar FROM Bidrag WHERE pseudonym='$N'"
-        sqlite3 -line $DB "SELECT tittel, tekst FROM Bidrag WHERE NOT pseudonym='$N'"
-    else # pseudonym er ikke satt 
-        sqlite3 -line $DB "SELECT tittel, tekst FROM Bidrag"
-    fi
-    exit
-fi
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
     if [ -n "$N" -a -n "$P" ]; then
 
+        # Vask inputter, beskytter mot SQL-injection
+        N=$(echo "$N" | sed "s/'/''/g")
+        P=$(echo "$P" | sed "s/'/''/g")    
+
         # Henter lagret saltverdi
-        S=$( sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'" )
-        if [ "$S" = "" ]; then echo Salt mangler ; exit; fi
+        S=$(sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'")
+        if [ -z "$S" ]; then
+            echo "Feil: Salt mangler for pseudonym $N" >&2
+            exit 1
+        fi
 
         # Beregner hashverdi av innsendt passord
-        H1=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
+        H1=$(mkpasswd -m sha-256 -S $S $P | cut -f4 -d$)
 
         # Sammenligner med lagret hashverdi
-        H2=$( sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'" )
-        if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
+        H2=$(sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'")
+        if [ "$H1" != "$H2" ]; then
+            echo "Feil: Ugyldig passord for pseudonym $N" >&2
+            exit 1
+        fi
 
         # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
         QUERY="SELECT tittel, tekst, kommentar 
         FROM Bidrag 
         WHERE pseudonym='$N'
         UNION
-        SELECT tittel, tekst, NULL AS kommentar 
+        SELECT tittel, tekst, 'Hemmelig :3' AS kommentar 
         FROM Bidrag 
-        WHERE pseudonym!='$N'"
+        WHERE NOT pseudonym='$N'"
 
         # Logger bruker innlogging
-        echo -e "\nLogging: \nBruker = $N" >&2
+        echo -e "\nLogging: \nBrukt Pseudonym = $N" >&2
     else
         # Query for alle uten kommentar
         QUERY="SELECT tittel, tekst FROM Bidrag"
