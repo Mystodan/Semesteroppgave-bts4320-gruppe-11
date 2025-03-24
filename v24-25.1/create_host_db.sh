@@ -1,10 +1,21 @@
 #!/bin/bash
 
 # Et skript for å lage lokale databaser brukt av allpodd.
+# Dette skriptet funker også som et reset skript ved å kjøre det på nytt.
+#
+# Databasene blir plassert i hver sin katalog.
+#
+# I katalogen /var/www/bidrag blir bidrag.db plassert.
+# I katalogen /var/www/pseudonym blir pseudonym.db plassert.
+
+# ========================
+# Bidrag database oppsett.
+# ========================
 
 DB_NAME="bidrag.db"
 
-sudo rm /var/www/"$DB_NAME"
+# Fjerner bidrag db.
+sudo rm /var/www/bidrag/"$DB_NAME"
 
 # Lager bidrag databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
@@ -20,7 +31,7 @@ CREATE TABLE Bidrag (
 );
 EOF
 
-# Setter inn eksempel data i bidrag tabellen.
+# Setter inn eksempel data i Bidrag tabellen.
 sudo sqlite3 "$DB_NAME" <<EOF
 INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES                 
    ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ),
@@ -28,19 +39,24 @@ INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES
    ('olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' );
 EOF
 
+# Gir alle brukere skrive tilgang på bidrag db.
 sudo chmod a+w "$DB_NAME"
 
-sudo mv ./$DB_NAME /var/www
+# Flytter bidrag db til /var/www/bidrag.
+sudo mv ./$DB_NAME /var/www/bidrag
 
 echo "Database '$DB_NAME' laget og befolket suksessfullt!"
 
-# Pseudonym database oppsett.
+# ===========================
+# Pseudonym database oppsett. 
+# ===========================
 
 DB_NAME="pseudonym.db"
 
-sudo rm /var/www/"$DB_NAME"
+# Fjerner pseudonym db.
+sudo rm /var/www/pseudonym/"$DB_NAME"
 
-# Lager bidrag databasen.
+# Lager pseudonym databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
 DROP TABLE IF EXISTS Pseudonym;
 CREATE TABLE Pseudonym (           
@@ -51,7 +67,7 @@ CREATE TABLE Pseudonym (
 );
 EOF
 
-# Setter inn eksempel data i bidrag tabellen.
+# Setter inn eksempel data i pseudonym tabellen.
 sudo sqlite3 "$DB_NAME" <<EOF
 INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES                
    ('Ante@example.com'   ,'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), 
@@ -59,8 +75,10 @@ INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES
    ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' );
 EOF
 
+# Gir alle brukere skrive tilgang på pseudonym db.
 sudo chmod a+w "$DB_NAME"
 
-sudo mv ./$DB_NAME /var/www
+# Flytt pseudonym db til /var/www/pseudonym.
+sudo mv ./$DB_NAME /var/www/pseudonym
 
 echo "Database '$DB_NAME' laget og befolket suksessfullt!"

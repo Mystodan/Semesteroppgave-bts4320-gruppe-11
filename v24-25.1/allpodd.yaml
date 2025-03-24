@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: "2025-03-12T21:53:20Z"
+  creationTimestamp: "2025-03-24T18:46:51Z"
   labels:
     app: allpodd
   name: allpodd
@@ -26,18 +26,11 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "2025-03-12T21:53:20Z"
+  creationTimestamp: "2025-03-24T18:46:51Z"
   labels:
     app: allpodd
   name: allpodd
 spec:
-  volumes:
-    - name: "bidrag-data"
-      persistentVolumeClaim:
-        claimName: bidrag-pvc
-    - name: "pseudonym-data"
-      persistentVolumeClaim:
-        claimName: pseudonym-pvc
   containers:
   - env:
     - name: TERM
@@ -56,22 +49,22 @@ spec:
     image: localhost/bidrag-db:latest
     imagePullPolicy: Never
     name: bidrag-db
+    volumeMounts:
+        - mountPath: "/var/www/bidrag"
+          name: "bidrag-data"
     stdin: true
     tty: true
-    volumeMounts:
-      - mountPath: "/var/www"
-        name: "bidrag-data"
   - env:
     - name: TERM
       value: xterm
     image: localhost/pseudonym-db:latest
     imagePullPolicy: Never
     name: pseudonym-db
+    volumeMounts:
+        - mountPath: "/var/www/pseudonym"
+          name: "pseudonym-data"
     stdin: true
     tty: true
-    volumeMounts:
-      - mountPath: "/var/www"
-        name: "pseudonym-data"
   - env:
     - name: TERM
       value: xterm
@@ -80,6 +73,13 @@ spec:
     name: web
     stdin: true
     tty: true
+  volumes:
+    - name: "bidrag-data"
+      persistentVolumeClaim:
+        claimName: bidrag-pvc
+    - name: "pseudonym-data"
+      persistentVolumeClaim:
+        claimName: pseudonym-pvc
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -89,10 +89,9 @@ spec:
   capacity:
     storage: 1Gi
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   hostPath:
-    path: "/var/www"
-
+    path: "/var/www/bidrag"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -100,11 +99,10 @@ metadata:
   name: bidrag-pvc
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -114,10 +112,9 @@ spec:
   capacity:
     storage: 1Gi
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   hostPath:
-    path: "/var/www"
-    
+    path: "/var/www/pseudonym"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -125,7 +122,7 @@ metadata:
   name: pseudonym-pvc
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi

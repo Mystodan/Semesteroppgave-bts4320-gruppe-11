@@ -35,23 +35,42 @@ podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
 
 # Lager kubernetes-fil
-#rm ./allpodd.yaml
-#podman generate kube allpodd --service -f ./allpodd.yaml
+rm ./allpodd.yaml
+podman generate kube allpodd --service -f ./allpodd.yaml
 
 # Erstatt nodePort verdien etter navn: "80"
-#sed -i '/- name: "80"/!b;n;s/nodePort: [0-9]\+/nodePort: 30080/' allpodd.yaml
+sed -i '/- name: "80"/!b;n;s/nodePort: [0-9]\+/nodePort: 30080/' allpodd.yaml
 
 # Erstatt nodePort verdien etter navn: "81"
-#sed -i '/- name: "81"/!b;n;s/nodePort: [0-9]\+/nodePort: 30081/' allpodd.yaml
+sed -i '/- name: "81"/!b;n;s/nodePort: [0-9]\+/nodePort: 30081/' allpodd.yaml
 
 # imagePullPolicy: Never
-#sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
+sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
 
-# Setter inn volumes i bunnen av filen.
-#sed -i '$a\volumes:' allpodd.yaml
+# Setter inn volumes under "spec:".
+sed -i '$a\
+  volumes:\
+    - name: "bidrag-data"\
+      persistentVolumeClaim:\
+        claimName: bidrag-pvc\
+    - name: "pseudonym-data"\
+      persistentVolumeClaim:\
+        claimName: pseudonym-pvc' allpodd.yaml
 
-#sed -i '/volumes:/a\\t- name "bidrag-data"' allpodd.yaml
+# Setter inn volumeMounts under bidrag-db konteineren.
+sed -i '/name: bidrag-db/a\
+    volumeMounts:\
+        - mountPath: "/var/www/bidrag"\
+          name: "bidrag-data"' allpodd.yaml
 
+# Setter inn volumeMounts under pseudonym-db konteineren.
+sed -i '/name: pseudonym-db/a\
+    volumeMounts:\
+        - mountPath: "/var/www/pseudonym"\
+          name: "pseudonym-data"' allpodd.yaml
+
+# Legg til persistent volume og claims for bidrag- og pseudonym-db.
+cat pv_and_pvc.yaml >> allpodd.yaml
 
 # Rydder opp (ved å drepe og fjerne podden)
 podman pod kill allpodd
@@ -72,6 +91,10 @@ microk8s kubectl delete pvc pseudonym-pvc &
 # Starte podden i en Service i K8S
 microk8s kubectl create -f allpodd.yaml
 microk8s kubectl get all
+
+# Hent persistentvolume og claims. 
+# microk8s kubectl get pv
+# microk8s kubectl get pvc
 
 echo "Gjør web (80) og app (81) tilgjengelig på localhost:"
 echo  microk8s kubectl port-forward service/allpodd 8080:80 &

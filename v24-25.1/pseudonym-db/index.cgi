@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DB=../pseudonym.db
+DB=/var/www/pseudonym/pseudonym.db
 
 echo 'Access-Control-Allow-Origin: http://localhost:8080'
 echo 'Access-Control-Allow-Credentials: true'
@@ -39,6 +39,6 @@ if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
 
 # Returnerer pseudonym
 PN=$(echo "SELECT pseudonym FROM  Pseudonym WHERE epost='$E'" | \
-	 sqlite3  ../pseudonym.db )
+	 sqlite3  /var/www/pseudonym/pseudonym.db )
 echo $PN >&2
 echo $PN

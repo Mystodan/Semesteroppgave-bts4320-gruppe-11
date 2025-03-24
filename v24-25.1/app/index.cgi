@@ -78,7 +78,7 @@ URL='allpodd:82'
 if [ "$H" = "Slett" ]; then curl -s -X DELETE -d "$XML" $URL; fi     
 if [ "$H" = "Endre" ]; then curl -s -X PUT    -d "$XML" $URL; fi
 if [ "$H" = "Ny"    ]; then curl -s -X POST   -d "$XML" $URL; fi
-if [ "$H" = "Liste" ]; then curl -s -X GET              $URL; fi
+if [ "$H" = "Liste" ]; then curl -s -X GET    -d "$XML" $URL; fi
 
 
 # Til loggen (kubctl logs pods/app-[...])
