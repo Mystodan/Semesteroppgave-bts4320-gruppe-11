@@ -9,3 +9,5 @@ Aller først ``cd gå/til/prosjekt/stien``
 Først kjør ``sudo ./create_host_db.sh`` for å initalisere databasene.
 
 Så kjør ``sudo ./podman_til_k8s.sh`` for å bygge og starte prosjektet.
+
+Hvis port-fordward feiler på grunn av sertifikat så er det mulig å kjøre ``./refresh_certs.sh`` skriptet.
