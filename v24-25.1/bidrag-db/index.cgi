@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DB=../bidrag.db
+DB=/var/www/bidrag/bidrag.db
 
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
