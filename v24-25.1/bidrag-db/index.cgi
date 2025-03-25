@@ -14,13 +14,10 @@ EOF
 
 
 # Omgår bug i httpd
-CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
+CONTENT_LENGTH="${HTTP_CONTENT_LENGTH:-$CONTENT_LENGTH}"
 
-if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst FROM  Bidrag"
-    exit
 
-elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
     exit
 
 else
@@ -38,7 +35,63 @@ else
 
 fi
 
+
+if [ "$REQUEST_METHOD" = "GET" ]; then
+    if [ -n "$N" -a -n "$P" ]; then
+
+        # Vask inputter, beskytter mot SQL-injection
+        N=$(echo "$N" | sed "s/'/''/g")
+        P=$(echo "$P" | sed "s/'/''/g")    
+
+        # Henter lagret saltverdi
+        S=$(sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'")
+        if [ -n "$S" ]; then
+            echo "Feil: Salt mangler for pseudonym $N" >&2
+            # Beregner hashverdi av innsendt passord
+            H1=$(mkpasswd -m sha-256 -S $S $P | cut -f4 -d$)
+
+            # Sammenligner med lagret hashverdi
+            H2=$(sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'")
+            if [ "$H1" != "$H2" ]; then
+                echo "Feil: Ugyldig passord for pseudonym $N" >&2
+                exit 1
+            fi
+
+            # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
+            QUERY="SELECT tittel, tekst, kommentar 
+            FROM Bidrag 
+            WHERE pseudonym='$N'
+            UNION
+            SELECT tittel, tekst, 'Hemmelig :3' AS kommentar 
+            FROM Bidrag 
+            WHERE NOT pseudonym='$N'"
+
+            # Logger bruker innlogging
+            echo -e "\nLogging: \nBrukt Pseudonym = $N" >&2
+        else
+            # Query for alle uten kommentar, inkudert om salt manger (Alså logget inn bruker ikke har et innlegg)
+            QUERY="SELECT tittel, tekst FROM Bidrag"
+        fi
+    else
+        # Query for alle uten kommentar
+        QUERY="SELECT tittel, tekst FROM Bidrag"
+    fi
+
+    # Kjører queryen
+    RESULT=$(sqlite3 -line $DB "$QUERY" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        echo "Feil: Mislykket å kjøre Query" >&2
+        exit 1
+    fi
+
+    # utgir resultatet
+    echo "$RESULT"
+    exit
+fi
+
+
 if [ "$N" = "" ]; then echo Pseudonym mangler!; exit; fi
+
 
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
@@ -79,7 +132,9 @@ elif [ "$REQUEST_METHOD" = "PUT" ]; then
        "UPDATE Bidrag SET      \
     	kommentar='$K',        \
     	offentlig_nokkel='$O', \
-	tittel='$T',           \
+	    tittel='$T',           \
         tekst='$X'             \
         WHERE pseudonym='$N'"
 fi
+
+
