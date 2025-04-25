@@ -17,6 +17,9 @@ DB_NAME="bidrag.db"
 # Fjerner bidrag db.
 sudo rm /var/www/bidrag/"$DB_NAME"
 
+# Lager bidrag katalogen.
+sudo mkdir /var/www/bidrag
+
 # Lager bidrag databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
 DROP TABLE IF EXISTS Bidrag;
@@ -55,6 +58,9 @@ DB_NAME="pseudonym.db"
 
 # Fjerner pseudonym db.
 sudo rm /var/www/pseudonym/"$DB_NAME"
+
+# Lager pseudonym katalogen.
+sudo mkdir /var/www/pseudonym
 
 # Lager pseudonym databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
