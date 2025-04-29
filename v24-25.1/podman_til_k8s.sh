@@ -84,6 +84,9 @@ sed -i '/name: pseudonym-db/a\
 # Legg til persistent volume og claims for bidrag- og pseudonym-db.
 cat pv_and_pvc.yaml >> allpodd.yaml
 
+# Fixes bug where a line is inserted into the yaml file that breaks it
+sed -i '/status/d' allpodd.yaml
+
 # Rydder opp (ved å drepe og fjerne podden)
 podman pod kill allpodd
 podman pod rm   allpodd
@@ -101,7 +104,7 @@ microk8s kubectl delete pv bidrag-pv &
 microk8s kubectl delete pvc bidrag-pvc &
 microk8s kubectl delete pv pseudonym-pv &
 microk8s kubectl delete pvc pseudonym-pvc &
-
+wait
 # Starte podden i en Service i K8S
 microk8s kubectl create -f allpodd.yaml
 microk8s kubectl get all
