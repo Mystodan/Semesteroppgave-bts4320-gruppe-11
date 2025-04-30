@@ -1,5 +1,5 @@
 FROM alpine
-RUN apk add busybox-extras libxml2-utils sqlite mkpasswd openssl
+RUN apk add busybox-extras libxml2-utils sqlite mkpasswd openssl coreutils
 COPY index.cgi var/www/cgi-bin/
 
 # Lager en katalog hvor bidrag databasen monteres.

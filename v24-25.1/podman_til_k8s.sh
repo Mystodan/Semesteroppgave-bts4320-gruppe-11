@@ -84,6 +84,13 @@ sed -i '/name: pseudonym-db/a\
 # Legg til persistent volume og claims for bidrag- og pseudonym-db.
 cat pv_and_pvc.yaml >> allpodd.yaml
 
+#Fixes bug where allpodd.yaml sometimes has a breaking line with the contents "status"
+TEMP=$(mktemp --suffix .yaml)
+cat allpodd.yaml > $TEMP
+sed -i '/status/d' $TEMP
+cat $TEMP > allpodd.yaml
+
+
 # Rydder opp (ved å drepe og fjerne podden)
 podman pod kill allpodd
 podman pod rm   allpodd
