@@ -79,14 +79,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             echo -e $PWD >&2
             # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
         
-            QUERY="\
-            SELECT tittel, tekst, ' $DECRYPTED_K' as kommentar\
-            FROM Bidrag \
-            WHERE pseudonym='$N'\
-            UNION \
-            SELECT tittel, tekst\
-            FROM Bidrag \
-            WHERE NOT pseudonym='$N'"
+            QUERY="SELECT tittel, tekst, '$DECRYPTED_K' AS kommentar FROM Bidrag WHERE pseudonym='$N' UNION SELECT tittel, tekst, 'Utilgjengelig for denne brukeren' AS kommentar FROM Bidrag WHERE NOT pseudonym='$N'"
 
             # Logger bruker innlogging
             echo -e "\nLogging: \nBrukt Pseudonym = $N" >&2
@@ -173,15 +166,13 @@ if [ "$REQUEST_METHOD" = "DELETE" ]; then
 elif [ "$REQUEST_METHOD" = "PUT" ]; then
     if [ "$N" = ""]; then
         exit
-
+    fi
     # Oppdater databasen med den nye offentlige nøkkelen og kryptert data
     sqlite3 $DB \
-    "UPDATE Bidrag SET kommentar='$NEW_ENCRYPTED_K',\ 
-    offentlig_nokkel='$O',\ 
-    tittel='$T', \
-    tekst='$X' \
+    "UPDATE Bidrag SET kommentar='$NEW_ENCRYPTED_K',
+    offentlig_nokkel='$O',
+    tittel='$T', 
+    tekst='$X' 
     WHERE pseudonym='$N'"
-
 fi
-
 
