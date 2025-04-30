@@ -12,40 +12,14 @@ Content-Type:text/plain;charset=utf-8
 
 EOF
 
-genpubkey() {
-    TEMP_PRIV_KEY=$(mktemp) # midlertidig fil for privat nøkkel
-    TEMP_PUB_KEY=$(mktemp) # midlertidig fil for offentlig nøkkel
-    echo "$1" > "$TEMP_PRIV_KEY" 
-
-    # Genererer en AES-nøkkel fra TEMP_PRIV_KEY
-    openssl rsa -in "$1" -out "$2" -pubout
-
-    # Sletter privat nøkkelen
-    rm -f "$TEMP_PRIV_KEY"
-}
-
 # Funksjon for RSA-kryptering
 rsa_encrypt() {
-    TEMP_PUB_KEY=$(mktemp) # midlertidig fil for offentlig nøkkel
-    genpubkey "$2" "$TEMP_PUB_KEY"  # genererer midlertidig offentlig nøkkel
-    
-    # Krypterer data med den offentlige nøkkelen
-    echo "$1" | openssl pkeyutl -encrypt -pubin -inkey "$TEMP_PUB_KEY" -out /dev/stdout | base64
-
-    # fjerner den midlertidige filen
-    rm -f "$TEMP_PUB_KEY"
+    echo "$1" | openssl pkeyutl -encrypt -pubin -inkey <(echo "$2") -out /dev/stdout | base64
 }
 
 # Funksjon for RSA-dekryptering
 rsa_decrypt() {
-    TEMP_PRIV_KEY=$(mktemp) # midlertidig fil for privat nøkkel
-    echo "$2" > "$TEMP_PRIV_KEY" # lagrer den private nøkkelen midlertidig
-
-    # Dekrypterer data med den private nøkkelen
-    echo "$1" | base64 -d | openssl pkeyutl -decrypt -inkey "$TEMP_PRIV_KEY"
-
-    # fjerner den midlertidige filen
-    rm -f "$TEMP_PRIV_KEY"
+    echo "$1" | base64 -d | openssl pkeyutl -decrypt -inkey "$2"
 }
 
 # Omgår bug i httpd
@@ -97,15 +71,13 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             ENCRYPTED_K=$(sqlite3 $DB "SELECT kommentar FROM Bidrag WHERE pseudonym='$N'")
 
             # Dekrypter data med privat nøkkel
-         
-            DECRYPTED_K=$(rsa_decrypt "$ENCRYPTED_K", "$P")
+            PRIV_KEY_PATH="/var/www/cgi-bin/private_keys"
+            DECRYPTED_K=$(rsa_decrypt "$ENCRYPTED_K", "$PRIV_KEY_PATH/$N.pem")
 
             # logger dekryptert data
             echo -e "\nDekryptert data: \nKommentar = $DECRYPTED_K" >&2
             echo -e $PWD >&2
             # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
-            
-
         
             QUERY="\
             SELECT tittel, tekst, ' $DECRYPTED_K' as kommentar\
@@ -147,8 +119,21 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
     if [ "$N" != ""  -a  "$P" != "" ]; then
 
+    # Generer et nytt RSA-nøkkelpar for brukeren
+    PRIVATE_KEY_FILE=$(mktemp)
+    PUBLIC_KEY_FILE=$(mktemp)
+    openssl genrsa -out "$PRIVATE_KEY_FILE" 2048
+    openssl rsa -in "$PRIVATE_KEY_FILE" -pubout -out "$PUBLIC_KEY_FILE"
+
+    # importer nøklene inn i variabler
+    PRIVATE_KEY=$(cat "$PRIVATE_KEY_FILE")
+    PUBLIC_KEY=$(cat "$PUBLIC_KEY_FILE")
+
+    # Fjern midlertidige filer
+    rm -f "$PRIVATE_KEY_FILE" "$PUBLIC_KEY_FILE"
+
     # Krypter data med den genererte offentlige nøkkelen
-    ENCRYPTED_K=$(rsa_encrypt "$K" "$P")
+    ENCRYPTED_K=$(rsa_encrypt "$K" "$PUBLIC_KEY")
 
 	# Lager et tilfeldig 11-sifret tall som salt
 	S=$( for I in $(seq 11);do echo -n $(($RANDOM%9));done )
@@ -156,19 +141,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	# Lager en hashverdi av det skapte saltet og det innsendte passordet
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
-    PRIVATE_KEY=$( mkpasswd -m sha-256 -S $P $P | cut -f4 -d$ )
-
-    PUBLIC_KEY=$(mktemp) # midlertidig fil for offentlig nøkkel
-    genpubkey "$P" "$PUBLIC_KEY"  # genererer midlertidig offentlig nøkkel
-
 	# Sett inn ny post i databasen
     sqlite3 $DB "INSERT INTO Bidrag (pseudonym, salt, passordhash, kommentar, offentlig_nokkel, tittel, tekst) \
                     VALUES ('$N', '$S', '$H', '$ENCRYPTED_K', '$PUBLIC_KEY', '$T', '$X')"
 
-
-    # Sletter midlertidig offentlig nøkkel
-    rm -f "$PUBLIC_KEY"
-
+    # Lagre den private nøkkelen sikkert
+    mkdir -p private_keys
+    echo "$PRIVATE_KEY" > "private_keys/$N.pem"
+    chmod 600 "private_keys/$N.pem"
     fi
     exit
 fi
