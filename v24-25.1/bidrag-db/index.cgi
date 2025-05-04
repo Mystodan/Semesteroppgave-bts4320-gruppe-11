@@ -45,35 +45,33 @@ if [ -n "$N" -a -n "$P" ]; then
         openssl genrsa -aes256 -passout pass:$P -out $PrivKey 4096	
         #Generate public key from private key
         openssl rsa -in $PrivKey -pubout -out $PubKey -passin pass:$P
+        echo "$(date +%T\ %D) - Generated new Private Key for $N " >&2
     fi
 fi
 
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
     if [ -n "$N" -a -n "$P" ]; then
-
         # Vask inputter, beskytter mot SQL-injection
         N=$(echo "$N" | sed "s/'/''/g")
         P=$(echo "$P" | sed "s/'/''/g")    
-
         # Henter lagret saltverdi
         S=$(sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'")
         if [ -n "$S" ]; then
-            echo "Feil: Salt mangler for pseudonym $N" >&2
             # Beregner hashverdi av innsendt passord
             H1=$(mkpasswd -m sha-256 -S $S $P | cut -f4 -d$)
-
+            
             # Sammenligner med lagret hashverdi
             H2=$(sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'")
             if [ "$H1" != "$H2" ]; then
-                echo "Feil: Ugyldig passord for pseudonym $N" >&2
+                echo $(date +%T\ %D) - $N brukte ugyldig passord! >&2
                 exit 1
             fi
-
+            
+            #Henter den krypterte kommentaren fra Databasen, for så å dekryptere den
             DB_EK=$(sqlite3 $DB "SELECT kommentar FROM Bidrag WHERE pseudonym='$N'")
             DK=$(echo $DB_EK | base64 -di | openssl pkeyutl -decrypt -inkey $PrivKey -passin pass:$P)
-
-
+            
             # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
             QUERY="SELECT tittel, tekst, '$DK' AS kommentar 
             FROM Bidrag 
@@ -82,9 +80,8 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             SELECT tittel, tekst, '[REDACTED]' AS kommentar 
             FROM Bidrag 
             WHERE NOT pseudonym='$N'"
-
             # Logger bruker innlogging
-            echo -e "\nLogging: \nBrukt Pseudonym = $N" >&2
+            echo "$(date +%T\ %D) - $N looked at stuff" >&2
         else
             # Query for alle uten kommentar, inkudert om salt manger (Alså logget inn bruker ikke har et innlegg)
             QUERY="SELECT tittel, tekst FROM Bidrag"
@@ -93,14 +90,12 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         # Query for alle uten kommentar
         QUERY="SELECT tittel, tekst FROM Bidrag"
     fi
-
     # Kjører queryen
     RESULT=$(sqlite3 -line $DB "$QUERY" 2>/dev/null)
     if [ $? -ne 0 ]; then
         echo "Feil: Mislykket å kjøre Query" >&2
         exit 1
     fi
-
     # utgir resultatet
     echo "$RESULT"
     exit
@@ -125,6 +120,8 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	# Setter inn ny post i databasen
         sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N','$S','$H','$EK','$O','$T','$X')"
     fi
+
+    echo "$(date +%T\ %D) - $N lagde nytt inlegg" >&2
     exit
 fi
 
@@ -137,24 +134,37 @@ H1=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
 # Sammenligner med lagret hashverdi
 H2=$( sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'" )
-if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
+if [ "$H1" != "$H2" ]; then echo "$(date +%T\ %D) - $N brukte feil passord!" >&2; exit; fi
 
 
 if [ "$REQUEST_METHOD" = "DELETE" ]; then
     if [ "$N" != "" ]; then
 	sqlite3 $DB "DELETE FROM Bidrag WHERE pseudonym='$N'"
+
+    #Removes Private and Public key for freshness
+    rm -f $PrivKey
+    if [ $? -ne 0 ]; then
+        echo "$(date +%T\ %D) - Sletting av PrivatKey feilet" >&2
+    fi
+    rm -f $PublicKey
+    if [ $? -ne 0 ]; then
+        echo "$(date +%T\ %D) - Sletting av PublicKey feilet" >&2
+    fi
+
+    echo "Sletting av innlegg ferdig"
+    echo "$(date +%T\ %D) - $N slettet inlegget sitt" >&2
     fi
 
 elif [ "$REQUEST_METHOD" = "PUT" ]; then
-
     EK=$(echo $K | openssl pkeyutl -encrypt -pubin -inkey $PubKey | base64)
-
     sqlite3 $DB                \
        "UPDATE Bidrag SET      \
     	kommentar='$EK',        \
 	    tittel='$T',           \
         tekst='$X'             \
         WHERE pseudonym='$N'"
+    
+    echo "$(date +%T\ %D) - $N oppdaterte inlegget sitt" >&2
 fi
 
 
