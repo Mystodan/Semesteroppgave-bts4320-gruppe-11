@@ -1,6 +1,9 @@
 #!/bin/sh
 
 DB=/var/www/bidrag/bidrag.db
+PKPATH=/var/www/bidrag/privatekeys
+mkdir -p $PKPATH
+
 
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
@@ -32,7 +35,17 @@ else
     O=$( echo "$KR" | xmllint --xpath "/bidrag/offentlig_nokkel/text()" - 2>/dev/null)
     T=$( echo "$KR" | xmllint --xpath "/bidrag/tittel/text()"           - 2>/dev/null)
     X=$( echo "$KR" | xmllint --xpath "/bidrag/tekst/text()"            - 2>/dev/null)
+fi
 
+#Generate Persistent Encrypted Private Key for user if it doesn't already exist
+if [ -n "$N" -a -n "$P" ]; then
+    PrivKey=$PKPATH/$N.pem
+    PubKey=$PKPATH/PublicKey$N.pem
+    if [ ! -f $PrivKey ]; then
+        openssl genrsa -aes256 -passout pass:$P -out $PrivKey 4096	
+        #Generate public key from private key
+        openssl rsa -in $PrivKey -pubout -out $PubKey -passin pass:$P
+    fi
 fi
 
 
@@ -57,12 +70,16 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
                 exit 1
             fi
 
+            DB_EK=$(sqlite3 $DB "SELECT kommentar FROM Bidrag WHERE pseudonym='$N'")
+            DK=$(echo $DB_EK | base64 -di | openssl pkeyutl -decrypt -inkey $PrivKey -passin pass:$P)
+
+
             # Query med union for å hente kommentaren til bruker i tillegg til andre sine bidrag
-            QUERY="SELECT tittel, tekst, kommentar 
+            QUERY="SELECT tittel, tekst, '$DK' AS kommentar 
             FROM Bidrag 
             WHERE pseudonym='$N'
             UNION
-            SELECT tittel, tekst, 'Hemmelig :3' AS kommentar 
+            SELECT tittel, tekst, '[REDACTED]' AS kommentar 
             FROM Bidrag 
             WHERE NOT pseudonym='$N'"
 
@@ -102,10 +119,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
 	# Lager en hashverdi av det skapte saltet og det innsendte passordet
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
+    O=$(cat $PubKey | base64)
+    EK=$(echo $K | openssl pkeyutl -encrypt -pubin -inkey $PubKey | base64)
 
 	# Setter inn ny post i databasen
-        sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N','$S','$H','$K','$O','$T','$X')"
-
+        sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N','$S','$H','$EK','$O','$T','$X')"
     fi
     exit
 fi
@@ -128,10 +146,12 @@ if [ "$REQUEST_METHOD" = "DELETE" ]; then
     fi
 
 elif [ "$REQUEST_METHOD" = "PUT" ]; then
+
+    EK=$(echo $K | openssl pkeyutl -encrypt -pubin -inkey $PubKey | base64)
+
     sqlite3 $DB                \
        "UPDATE Bidrag SET      \
-    	kommentar='$K',        \
-    	offentlig_nokkel='$O', \
+    	kommentar='$EK',        \
 	    tittel='$T',           \
         tekst='$X'             \
         WHERE pseudonym='$N'"
