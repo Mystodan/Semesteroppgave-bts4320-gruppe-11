@@ -36,8 +36,8 @@ openssl genrsa 2048 > "$KeysPath/arne.key"
 openssl genrsa 2048 > "$KeysPath/beate.key"
 
 #Lager signeringsforesprlser som skal i yaml filen, disse er kodet til base64
-openssl req -new -key arne.key  -subj "/CN=arne/O=pseudonymadmingruppe" | base64 | tr -d '\n' > "$KeysPath/arneb64.txt"
-openssl req -new -key beate.key -subj "/CN=beate/O=bidragsadmingruppe"  | base64 | tr -d '\n' > "$KeysPath/beateb64.txt"
+openssl req -new -key "$KeysPath/arne.key"  -subj "/CN=arne/O=pseudonymadmingruppe" | base64 | tr -d '\n' > "$KeysPath/arneb64.txt"
+openssl req -new -key "$KeysPath/beate.key" -subj "/CN=beate/O=bidragsadmingruppe"  | base64 | tr -d '\n' > "$KeysPath/beateb64.txt"
 
 #Putter innholdet fra arneb64.txt of beateb64.txt inn i yaml filen under
 
@@ -71,6 +71,9 @@ microk8s kubectl apply -f $KeysPath/signeringsforesporsel.yaml
 #Godkjenner signeringsforespørslene
 microk8s kubectl certificate approve arne-csr
 microk8s kubectl certificate approve beate-csr
+
+microk8s kubectl get csr arne-csr -o jsonpath='{ .status.certificate }' | base64 -d > "$KeysPath/arne.crt"
+microk8s kubectl get csr beate-csr -o jsonpath='{ .status.certificate }' | base64 -d > "$KeysPath/beate.crt"
 
 microk8s kubectl config set-credentials arne --client-key=$KeysPath/arne.key --client-certificate=$KeysPath/arne.key --embed-certs=true
 microk8s kubectl config set-credentials beate --client-key=$KeysPath/beate.key --client-certificate=$KeysPath/beate.crt --embed-certs=true
