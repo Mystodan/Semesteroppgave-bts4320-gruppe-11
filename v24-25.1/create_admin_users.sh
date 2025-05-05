@@ -78,6 +78,11 @@ microk8s kubectl get csr beate-csr -o jsonpath='{ .status.certificate }' | base6
 microk8s kubectl config set-credentials arne --client-key=$KeysPath/arne.key --client-certificate=$KeysPath/arne.key --embed-certs=true
 microk8s kubectl config set-credentials beate --client-key=$KeysPath/beate.key --client-certificate=$KeysPath/beate.crt --embed-certs=true
 
+#Create context for users
+microk8s kubectl config set-context arne --cluster=microk8s-cluster --user=arne
+microk8s kubectl config set-context beate --cluster=microk8s-cluster --user=beate
+
+
 if [ $? -ne 0 ]; then
 	echo "An error occured"
 	exit 1
