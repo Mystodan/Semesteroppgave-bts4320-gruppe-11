@@ -8,7 +8,7 @@ Aller først ``cd gå/til/prosjekt/stien``
 
 Først kjør ``sudo ./create_host_db.sh`` for å initalisere databasene.
 
-Kjør sudo ``./create_admin_users.sh`` for å sette opp adminstratorer og navnrom.
+Kjør ``sudo ./create_admin_users.sh`` for å sette opp adminstratorer og navnrom.
 
 Så kjør ``sudo ./podman_til_k8s.sh`` for å bygge og starte prosjektet.
 
