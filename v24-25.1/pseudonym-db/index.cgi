@@ -19,7 +19,7 @@ CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 KR=$(head -c "$CONTENT_LENGTH" )
 
 # Til loggen (kubctl logs pods/allpodd -c pseudonym-db -f)
-echo psudonym-db fikk dette i kroppen: $KR >&2 
+echo psudonym-db fikk dette i kroppen: $KR >&2
 
 E=$( echo "$KR" | xmllint --xpath "/pseudonym/epost/text()"   -  2> /dev/null)
 P=$( echo "$KR" | xmllint --xpath "/pseudonym/passord/text()" -  2> /dev/null)
@@ -37,6 +37,9 @@ H1=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 H2=$( sqlite3 $DB "SELECT passordhash FROM Pseudonym WHERE epost='$E'" )
 if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
 
+
+curr_time=$(date +%s)
+sqlite3 $DB "UPDATE Pseudonym SET lastlogin=$curr_time WHERE epost='$E'"
 # Returnerer pseudonym
 PN=$(echo "SELECT pseudonym FROM  Pseudonym WHERE epost='$E'" | \
 	 sqlite3  /var/www/pseudonym/pseudonym.db )

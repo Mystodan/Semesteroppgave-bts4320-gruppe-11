@@ -23,22 +23,22 @@ sudo mkdir /var/www/bidrag
 # Lager bidrag databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
 DROP TABLE IF EXISTS Bidrag;
-CREATE TABLE Bidrag (                  
-  pseudonym        VARCHAR(200) PRIMARY KEY, 
-  salt             VARCHAR(11),              	
-  passordhash      VARCHAR(44),              
-  kommentar        VARCHAR(1000),            
-  offentlig_nokkel VARCHAR(200),            
-  tittel           VARCHAR(100),             
+CREATE TABLE Bidrag (
+  pseudonym        VARCHAR(200) PRIMARY KEY,
+  salt             VARCHAR(11),
+  passordhash      VARCHAR(44),
+  kommentar        VARCHAR(1000),
+  offentlig_nokkel VARCHAR(200),
+  tittel           VARCHAR(100),
   tekst            VARCHAR(1000)
 );
 EOF
 
 # Setter inn eksempel data i Bidrag tabellen.
 sudo sqlite3 "$DB_NAME" <<EOF
-INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES                 
+INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES
    ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ),
-   ('uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), 
+   ('uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ),
    ('olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' );
 EOF
 
@@ -51,7 +51,7 @@ sudo mv ./$DB_NAME /var/www/bidrag
 echo "Database '$DB_NAME' laget og befolket suksessfullt!"
 
 # ===========================
-# Pseudonym database oppsett. 
+# Pseudonym database oppsett.
 # ===========================
 
 DB_NAME="pseudonym.db"
@@ -65,20 +65,23 @@ sudo mkdir /var/www/pseudonym
 # Lager pseudonym databasen.
 sudo sqlite3 "$DB_NAME" <<EOF
 DROP TABLE IF EXISTS Pseudonym;
-CREATE TABLE Pseudonym (           
-  epost         VARCHAR(200) PRIMARY KEY, 
-  pseudonym     VARCHAR(200),             
-  salt          VARCHAR(11),              	
-  passordhash   VARCHAR(44)
+CREATE TABLE Pseudonym (
+  epost         VARCHAR(200) PRIMARY KEY,
+  pseudonym     VARCHAR(200),
+  salt          VARCHAR(11),
+  passordhash   VARCHAR(44),
+  lastlogin     INT
 );
 EOF
 
+current_time=$(date +%s)
+
 # Setter inn eksempel data i pseudonym tabellen.
 sudo sqlite3 "$DB_NAME" <<EOF
-INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash) VALUES                
-   ('Ante@example.com'   ,'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), 
-   ('Bjart@example.com'  ,'uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), 
-   ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA' );
+INSERT INTO Pseudonym (epost, pseudonym, salt, passordhash, lastlogin) VALUES
+   ('Ante@example.com'   ,'osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA', $current_time ),
+   ('Bjart@example.com'  ,'uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48', $current_time ),
+   ('Cecilie@example.com','olaebaev', '1712167672', 'D0z6dLRTSw.u7tct9zQVBUOCBhPEiFn2Eb./li.oyUA', $current_time );
 EOF
 
 # Gir alle brukere skrive tilgang på pseudonym db.
